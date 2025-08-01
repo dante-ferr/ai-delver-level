@@ -1,0 +1,11 @@
+{
+  "tilemap_layer_names": ["floor", "walls"],
+  "layer_order": ["floor", "walls", "essentials"],
+  "start_map_width": 7,
+  "start_map_height": 7,
+  "tile_width": 32,
+  "tile_height": 32,
+  "min_grid_size": [5, 5],
+  "max_grid_size": [100, 100],
+  "save_folder_path": "data/level_saves"
+}
