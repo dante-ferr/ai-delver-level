@@ -1,10 +1,8 @@
 from pytiling import GridMap
-import json
 from typing import TYPE_CHECKING, cast
 from .editor_tilemap import EditorTilemap
 from .world_objects_map import WorldObjectsMap
-import os
-import json
+from level.config import LAYER_ORDER
 
 if TYPE_CHECKING:
     from level.canvas_object import CanvasObject
@@ -14,14 +12,6 @@ if TYPE_CHECKING:
     from level.grid_map.world_objects_map.world_objects_layer.world_objects_layer import (
         WorldObjectsLayer,
     )
-
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(current_dir, "..", "config.json")
-with open(config_path, "r") as file:
-    config_data = json.load(file)
-
-LAYER_ORDER = config_data["layer_order"]
 
 
 class MixedMap(GridMap):

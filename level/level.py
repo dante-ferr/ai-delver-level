@@ -2,18 +2,10 @@ from typing import TYPE_CHECKING
 from .level_selector import LevelSelector
 from .level_toggler import LevelToggler
 import dill
-from pathlib import Path
-import json
+from level.config import SAVE_FOLDER_PATH
 
 if TYPE_CHECKING:
     from .grid_map import MixedMap
-
-current_dir = Path(__file__).parent.absolute()
-config_path = current_dir / "config.json"
-with open(config_path, "r") as file:
-    config_data = json.load(file)
-
-SAVE_FOLDER_PATH = Path(config_data["save_folder_path"])
 
 class Level:
 

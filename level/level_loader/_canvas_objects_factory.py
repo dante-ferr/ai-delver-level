@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Callable, cast
 from ..canvas_object import CanvasObject
 from ..grid_map.world_objects_map.world_objects_layer import WorldObjectsLayer
 from ..grid_map.mixed_map import MixedMap
+from level.config import ASSETS_PATH
 
 if TYPE_CHECKING:
     from ..level import Level
@@ -78,7 +79,8 @@ class CanvasObjectsFactory:
                 self._create_canvas_object(
                     variation,
                     _create_element_callback,
-                    path=f"assets/img/representations/{canvas_object_name}/{variation}.png",
+                    path=ASSETS_PATH
+                    / f"img/representations/{canvas_object_name}/{variation}.png",
                 )
             )
 
@@ -122,7 +124,7 @@ class CanvasObjectsFactory:
         path: str | None = None,
     ):
         if path is None:
-            path = "assets/img/representations/" + canvas_object_name + ".png"
+            path = ASSETS_PATH / f"img/representations/{canvas_object_name}.png"
         return CanvasObject(
             canvas_object_name,
             path,

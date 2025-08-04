@@ -1,30 +1,26 @@
-import json
 from pytiling import Tileset
 from ..grid_map.editor_tilemap.editor_tilemap_layer import EditorTilemapLayer
 from ..grid_map.world_objects_map import WorldObjectsLayer
 from typing import TYPE_CHECKING
 from ..grid_map import MixedMap
 from ._canvas_objects_factory import CanvasObjectsFactory
-import os
+from level.config import (
+    ASSETS_PATH,
+    START_MAP_WIDTH,
+    START_MAP_HEIGHT,
+    TILE_WIDTH,
+    TILE_HEIGHT,
+    MIN_GRID_SIZE,
+    MAX_GRID_SIZE,
+    LAYER_ORDER,
+    TILEMAP_LAYER_NAMES,
+)
 
 if TYPE_CHECKING:
     from ..level import Level
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(current_dir, "..", "config.json")
-with open(config_path, "r") as file:
-    config_data = json.load(file)
-
-MAP_SIZE = (
-    config_data["start_map_width"],
-    config_data["start_map_height"],
-)
-TILE_SIZE = (config_data["tile_width"], config_data["tile_height"])
-MIN_GRID_SIZE = tuple(config_data["min_grid_size"])
-MAX_GRID_SIZE = tuple(config_data["max_grid_size"])
-LAYER_ORDER: list[str] = config_data["layer_order"]
-TILEMAP_LAYER_NAMES: list[str] = config_data["tilemap_layer_names"]
-
+MAP_SIZE = (START_MAP_WIDTH, START_MAP_HEIGHT)
+TILE_SIZE = (TILE_WIDTH, TILE_HEIGHT)
 
 class LevelFactory:
 
@@ -51,13 +47,13 @@ class LevelFactory:
         layers = {
             "floor": EditorTilemapLayer(
                 "floor",
-                Tileset("assets/img/tilesets/dungeon/floor.png"),
-                "assets/svg/floor.svg",
+                Tileset(ASSETS_PATH / "img/tilesets/dungeon/floor.png"),
+                ASSETS_PATH / "svg/floor.svg",
             ),
             "walls": EditorTilemapLayer(
                 "walls",
-                Tileset("assets/img/tilesets/dungeon/walls.png"),
-                "assets/svg/walls.svg",
+                Tileset(ASSETS_PATH / "img/tilesets/dungeon/walls.png"),
+                ASSETS_PATH / "svg/walls.svg",
             ),
         }
 
@@ -81,7 +77,7 @@ class LevelFactory:
         self.tilemap.format_all_tiles()
 
     def _configure_world_objects_map(self):
-        essentials = WorldObjectsLayer("essentials", "assets/svg/important.svg")
+        essentials = WorldObjectsLayer("essentials", ASSETS_PATH / "svg/important.svg")
         self.world_objects_map.add_layer(essentials)
 
     @property
