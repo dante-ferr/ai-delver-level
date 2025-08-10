@@ -3,9 +3,12 @@ from .level_selector import LevelSelector
 from .level_toggler import LevelToggler
 import dill
 from level.config import SAVE_FOLDER_PATH
+from pathlib import Path
+
 
 if TYPE_CHECKING:
     from .grid_map import MixedMap
+
 
 class Level:
 
@@ -29,17 +32,37 @@ class Level:
         self._name = value
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        state["selector"] = None
-        state["toggler"] = None
-
-        return state
+        """
+        Custom serialization method to explicitly define the object's state.
+        This prevents pickling transient or environment-specific attributes
+        like Path objects, selectors, or togglers.
+        We only serialize the data that is essential to the level's definition.
+        """
+        return {
+            "map": self.map,
+            "_name": self._name,
+        }
 
     def __setstate__(self, state):
+        """
+        Custom deserialization method to reconstruct the object from its state
+        and then re-initialize the transient attributes that were not serialized.
+        """
         self.__dict__.update(state)
 
+        # Re-create the objects that were not part of the serialized state
         self.selector = LevelSelector()
         self.toggler = LevelToggler()
+
+    @property
+    def save_file_path(self):
+        """
+        Dynamically generates the save file path.
+        This property is not serialized, thus avoiding the ModuleNotFoundError.
+        """
+        return (
+            Path(SAVE_FOLDER_PATH) / f"{self.name}.dill" if SAVE_FOLDER_PATH else None
+        )
 
     @property
     def same_name_saved(self):
@@ -51,10 +74,6 @@ class Level:
 
         with open(self.save_file_path, "wb") as file:
             dill.dump(self, file)
-
-    @property
-    def save_file_path(self):
-        return SAVE_FOLDER_PATH / f"{self.name}.dill" if SAVE_FOLDER_PATH else None
 
     @property
     def issues(self):

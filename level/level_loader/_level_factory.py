@@ -47,13 +47,13 @@ class LevelFactory:
         layers = {
             "floor": EditorTilemapLayer(
                 "floor",
-                Tileset(ASSETS_PATH / "img/tilesets/dungeon/floor.png"),
-                ASSETS_PATH / "svg/floor.svg",
+                Tileset(str(ASSETS_PATH / "img/tilesets/dungeon/floor.png")),
+                str(ASSETS_PATH / "svg/floor.svg"),
             ),
             "walls": EditorTilemapLayer(
                 "walls",
-                Tileset(ASSETS_PATH / "img/tilesets/dungeon/walls.png"),
-                ASSETS_PATH / "svg/walls.svg",
+                Tileset(str(ASSETS_PATH / "img/tilesets/dungeon/walls.png")),
+                str(ASSETS_PATH / "svg/walls.svg"),
             ),
         }
 
@@ -77,7 +77,9 @@ class LevelFactory:
         self.tilemap.format_all_tiles()
 
     def _configure_world_objects_map(self):
-        essentials = WorldObjectsLayer("essentials", ASSETS_PATH / "svg/important.svg")
+        essentials = WorldObjectsLayer(
+            "essentials", str(ASSETS_PATH / "svg/important.svg")
+        )
         self.world_objects_map.add_layer(essentials)
 
     @property

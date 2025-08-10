@@ -79,8 +79,10 @@ class CanvasObjectsFactory:
                 self._create_canvas_object(
                     variation,
                     _create_element_callback,
-                    path=ASSETS_PATH
-                    / f"img/representations/{canvas_object_name}/{variation}.png",
+                    path=str(
+                        ASSETS_PATH
+                        / f"img/representations/{canvas_object_name}/{variation}.png"
+                    ),
                 )
             )
 
@@ -124,7 +126,7 @@ class CanvasObjectsFactory:
         path: str | None = None,
     ):
         if path is None:
-            path = ASSETS_PATH / f"img/representations/{canvas_object_name}.png"
+            path = str(ASSETS_PATH / f"img/representations/{canvas_object_name}.png")
         return CanvasObject(
             canvas_object_name,
             path,
