@@ -27,6 +27,8 @@ class LevelLoader:
             logging.info("Creating new level")
             self._create_new_level()
 
+        return self.level
+
     @property
     def level(self):
         if self._level is None:
