@@ -15,12 +15,14 @@ class LevelLoader:
         self._create_new_level()
 
     def load_level(self, path: str | Path):
+        """Loads a level from a file. The path of the level directory must be provided (instead of the level file itself)."""
         if type(path) == str:
             path = Path(path)
         path = cast(Path, path)
+        file_path = path / "level.dill"
 
-        if path.is_file():
-            with open(path, "rb") as file:
+        if file_path.is_file():
+            with open(file_path, "rb") as file:
                 logging.info("Loading existing level")
                 self._level = dill.load(file)
         else:

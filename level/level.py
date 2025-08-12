@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 from .level_selector import LevelSelector
 from .level_toggler import LevelToggler
 import dill
-from level.config import SAVE_FOLDER_PATH
 from pathlib import Path
+from .config import LEVEL_SAVE_FOLDER_PATH
 
 
 if TYPE_CHECKING:
@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class Level:
-
     def __init__(
         self,
         map: "MixedMap",
@@ -60,17 +59,17 @@ class Level:
         Dynamically generates the save file path.
         This property is not serialized, thus avoiding the ModuleNotFoundError.
         """
-        return (
-            Path(SAVE_FOLDER_PATH) / f"{self.name}.dill" if SAVE_FOLDER_PATH else None
-        )
+        return Path(LEVEL_SAVE_FOLDER_PATH) / Path(self.name) / f"level.dill"
 
     @property
     def same_name_saved(self):
-        return self.save_file_path.is_file() if self.save_file_path else None
+        return self.save_file_path.parent.is_dir() if self.save_file_path else None
 
     def save(self):
         if not self.save_file_path:
             raise ValueError("Save file path is not set for the level.")
+
+        self.save_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(self.save_file_path, "wb") as file:
             dill.dump(self, file)

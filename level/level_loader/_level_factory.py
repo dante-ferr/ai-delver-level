@@ -4,6 +4,7 @@ from ..grid_map.world_objects_map import WorldObjectsLayer
 from typing import TYPE_CHECKING
 from ..grid_map import MixedMap
 from ._canvas_objects_factory import CanvasObjectsFactory
+from ..level import Level
 from level.config import (
     ASSETS_PATH,
     START_MAP_WIDTH,
@@ -16,19 +17,12 @@ from level.config import (
     TILEMAP_LAYER_NAMES,
 )
 
-if TYPE_CHECKING:
-    from ..level import Level
-
 MAP_SIZE = (START_MAP_WIDTH, START_MAP_HEIGHT)
 TILE_SIZE = (TILE_WIDTH, TILE_HEIGHT)
 
 class LevelFactory:
 
-    def __init__(self):
-        self._level: "Level | None" = None
-
     def create_level(self):
-        from ..level import Level
 
         mixed_map = MixedMap(TILE_SIZE, MAP_SIZE, MIN_GRID_SIZE, MAX_GRID_SIZE)
         self.tilemap = mixed_map.tilemap
@@ -37,11 +31,11 @@ class LevelFactory:
         self._configure_world_objects_map()
         mixed_map.populate_layers()
 
-        self.level = Level(mixed_map)
-        self.level.map.add_layer_concurrence("walls", "essentials")
+        level = Level(mixed_map)
+        level.map.add_layer_concurrence("walls", "essentials")
 
-        CanvasObjectsFactory(self.level).create_canvas_objects()
-        return self.level
+        CanvasObjectsFactory(level).create_canvas_objects()
+        return level
 
     def _configure_tilemap(self):
         layers = {
@@ -81,13 +75,3 @@ class LevelFactory:
             "essentials", str(ASSETS_PATH / "svg/important.svg")
         )
         self.world_objects_map.add_layer(essentials)
-
-    @property
-    def level(self) -> "Level":
-        if not self._level:
-            raise ValueError("Level not loaded.")
-        return self._level
-
-    @level.setter
-    def level(self, level: "Level"):
-        self._level = level

@@ -13,7 +13,7 @@ TILE_WIDTH = config["tile_width"]
 TILE_HEIGHT = config["tile_height"]
 MIN_GRID_SIZE = tuple(config["min_grid_size"])
 MAX_GRID_SIZE = tuple(config["max_grid_size"])
-SAVE_FOLDER_PATH = config["save_folder_path"]
+LEVEL_SAVE_FOLDER_PATH = config["level_save_folder_path"]
 
 
 def get_project_root() -> Path:
