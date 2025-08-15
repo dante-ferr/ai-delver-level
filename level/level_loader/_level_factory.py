@@ -9,6 +9,8 @@ from level.config import (
     ASSETS_PATH,
     START_MAP_WIDTH,
     START_MAP_HEIGHT,
+    START_DELVER_POSITION,
+    START_GOAL_POSITION,
     TILE_WIDTH,
     TILE_HEIGHT,
     MIN_GRID_SIZE,
@@ -35,6 +37,11 @@ class LevelFactory:
         level.map.add_layer_concurrence("walls", "essentials")
 
         CanvasObjectsFactory(level).create_canvas_objects()
+
+        self._create_starting_tiles()
+        self.tilemap.lock_boundary_walls_if_needed()
+        self._create_starting_world_objects()
+
         return level
 
     def _configure_tilemap(self):
@@ -57,9 +64,6 @@ class LevelFactory:
 
         self.tilemap.add_layer_concurrence("walls", "floor")
 
-        self._create_starting_tiles()
-        self.tilemap.lock_boundary_walls_if_needed()
-
     def _create_starting_tiles(self):
         for x in range(1, self.tilemap.grid_size[0] - 1):
             for y in range(1, self.tilemap.grid_size[1] - 1):
@@ -75,3 +79,18 @@ class LevelFactory:
             "essentials", str(ASSETS_PATH / "svg/important.svg")
         )
         self.world_objects_map.add_layer(essentials)
+
+    def _create_starting_world_objects(self):
+        self.world_objects_map.get_layer("essentials").create_world_object_at(
+            START_DELVER_POSITION,
+            "delver",
+        )
+
+        # The goal needs to be placed on a special manner, as it has varieties.
+        self.world_objects_map.get_layer(
+            "essentials"
+        ).canvas_object_manager.get_canvas_object(
+            "battery_snack"
+        ).create_element_callback(
+            START_GOAL_POSITION
+        )

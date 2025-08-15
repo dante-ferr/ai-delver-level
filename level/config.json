@@ -3,6 +3,8 @@
   "layer_order": ["floor", "walls", "essentials"],
   "start_map_width": 7,
   "start_map_height": 7,
+  "start_delver_position": [1, 3],
+  "start_goal_position": [5, 3],
   "tile_width": 32,
   "tile_height": 32,
   "min_grid_size": [5, 5],
