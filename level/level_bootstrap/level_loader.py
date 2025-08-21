@@ -1,4 +1,4 @@
-import dill
+from ._level_factory import LevelFactory
 from ._level_factory import LevelFactory
 from pathlib import Path
 from typing import cast, TYPE_CHECKING
@@ -19,12 +19,12 @@ class LevelLoader:
         if type(path) == str:
             path = Path(path)
         path = cast(Path, path)
-        file_path = path / "level.dill"
+        file_path = path / "level.json"
 
         if file_path.is_file():
-            with open(file_path, "rb") as file:
-                logging.info("Loading existing level")
-                self._level = dill.load(file)
+            from ..level import Level
+
+            self._level = Level.load(str(file_path))
         else:
             logging.info("Creating new level")
             self._create_new_level()
@@ -35,6 +35,11 @@ class LevelLoader:
     def level(self):
         if self._level is None:
             raise ValueError("The level doesn't exist.")
+        return self._level
+
+    @level.setter
+    def level(self, value: "Level"):
+        """Sets the level to the given level. This should only be used for testing."""
         return self._level
 
     def _create_new_level(self):

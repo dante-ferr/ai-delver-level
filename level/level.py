@@ -1,23 +1,22 @@
-from typing import TYPE_CHECKING
-from .level_selector import LevelSelector
 from .level_toggler import LevelToggler
-import dill
+import json
+from pytiling.serialization import map_from_dict
 from pathlib import Path
 from .config import LEVEL_SAVE_FOLDER_PATH
-
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from .grid_map import MixedMap
 
 
 class Level:
+
     def __init__(
         self,
-        map: "MixedMap",
+        mixed_map: "MixedMap",
     ):
-        self.map = map
+        self.map = mixed_map
 
-        self.selector = LevelSelector()
         self.toggler = LevelToggler()
 
         self._name = "My custom level"
@@ -30,36 +29,32 @@ class Level:
     def name(self, value):
         self._name = value
 
-    def __getstate__(self):
-        """
-        Custom serialization method to explicitly define the object's state.
-        This prevents pickling transient or environment-specific attributes
-        like Path objects, selectors, or togglers.
-        We only serialize the data that is essential to the level's definition.
-        """
+    def to_dict(self):
         return {
-            "map": self.map,
             "_name": self._name,
+            "map": self.map.to_dict(),
         }
 
-    def __setstate__(self, state):
-        """
-        Custom deserialization method to reconstruct the object from its state
-        and then re-initialize the transient attributes that were not serialized.
-        """
-        self.__dict__.update(state)
+    @classmethod
+    def from_dict(cls, data: dict):
+        map_obj = cast("MixedMap", map_from_dict(data["map"]))
+        instance = cls(mixed_map=map_obj)
+        instance.name = data["_name"]
+        return instance
 
-        # Re-create the objects that were not part of the serialized state
-        self.selector = LevelSelector()
-        self.toggler = LevelToggler()
+    @staticmethod
+    def load(filepath: str):
+        with open(filepath, "r") as file:
+            data = json.load(file)
+        level = Level.from_dict(data)
+        return level
 
     @property
     def save_file_path(self):
         """
         Dynamically generates the save file path.
-        This property is not serialized, thus avoiding the ModuleNotFoundError.
         """
-        return Path(LEVEL_SAVE_FOLDER_PATH) / Path(self.name) / f"level.dill"
+        return Path(LEVEL_SAVE_FOLDER_PATH) / Path(self.name) / f"level.json"
 
     @property
     def same_name_saved(self):
@@ -71,8 +66,8 @@ class Level:
 
         self.save_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(self.save_file_path, "wb") as file:
-            dill.dump(self, file)
+        with open(self.save_file_path, "w") as file:
+            json.dump(self.to_dict(), file, indent=2)
 
     @property
     def issues(self):

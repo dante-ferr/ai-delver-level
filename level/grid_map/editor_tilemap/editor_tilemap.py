@@ -15,16 +15,36 @@ FLOOR_VARIATIONS_FILENAME = os.path.join(
 
 
 class EditorTilemap(Tilemap):
+
     def __init__(
         self,
-        mixed_map: "MixedMap",
         tile_size: tuple[int, int],
         grid_size: tuple[int, int] = (5, 5),
         min_grid_size: tuple[int, int] = (5, 5),
         max_grid_size: tuple[int, int] = (100, 100),
+        mixed_map: "MixedMap | None" = None,
     ):
+        """
+        Initialize the EditorTilemap with optional mixed_map reference.
+        If mixed_map is not provided right away, it can must be set later to allow
+        acessing the MixedMap methods like 'reduce_towards' and 'expand_towards'.
+        """
         super().__init__(tile_size, grid_size, min_grid_size, max_grid_size)
-        self.mixed_map = mixed_map
+        self._mixed_map = mixed_map
+
+    def to_dict(self):
+        """Serialize the tilemap to a dictionary."""
+        data = super().to_dict()
+        data["__class__"] = "EditorTilemap"
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """
+        Deserialize a tilemap from a dictionary.
+        Note: This does not handle layer concurrences. The parent MixedMap is responsible for that.
+        """
+        return cls._from_dict_base(data)
 
     def add_layer(self, layer: "GridLayer", position: int | Literal["end"] = "end"):
         """Add a layer to the tilemap."""
@@ -137,3 +157,17 @@ class EditorTilemap(Tilemap):
         for element in elements:
             if element is not None:
                 element.locked = True
+
+    @property
+    def mixed_map(self):
+        if self._mixed_map is None:
+            raise ValueError("MixedMap reference is not set.")
+        return self._mixed_map
+
+    @mixed_map.setter
+    def mixed_map(self, value: "MixedMap | None"):
+        """
+        Set the mixed_map reference.
+        This is useful if the mixed_map is not available during initialization.
+        """
+        self._mixed_map = value

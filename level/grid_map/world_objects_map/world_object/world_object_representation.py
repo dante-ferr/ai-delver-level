@@ -6,13 +6,36 @@ if TYPE_CHECKING:
 
 
 class WorldObjectRepresentation(GridElement):
-    """A representation of a world object (parent of game entities). Its name should be the same as the canvas object that represents it"""
+    """A representation of a world object (parent of game entities). Its name should be the same as the canvas object that represents it."""
 
     def __init__(
         self, position: tuple[int, int], name: str, tags: list[str] = [], **args
     ):
         super().__init__(position, name, **args)
         self.tags = tags
+
+    def to_dict(self):
+        """Serialize the world object representation to a dictionary."""
+        return {
+            "__class__": "WorldObjectRepresentation",
+            "position": self.position,
+            "name": self.name,
+            "locked": self.locked,
+            "unique": self.unique,
+            "tags": self.tags,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Deserialize a world object representation from a dictionary."""
+        instance = cls(
+            position=tuple(data["position"]),
+            name=data["name"],
+            tags=data.get("tags", []),
+        )
+        instance.locked = data.get("locked", False)
+        instance.unique = data.get("unique", False)
+        return instance
 
     @property
     def layer(self):

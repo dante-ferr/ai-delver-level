@@ -5,7 +5,6 @@ from .world_objects_map import WorldObjectsMap
 from level.config import LAYER_ORDER
 
 if TYPE_CHECKING:
-    from level.canvas_object import CanvasObject
     from level.grid_map.editor_tilemap.editor_tilemap_layer import (
         EditorTilemapLayer,
     )
@@ -25,11 +24,47 @@ class MixedMap(GridMap):
         super().__init__(tile_size, grid_size, min_grid_size, max_grid_size)
 
         self.tilemap = EditorTilemap(
-            self, tile_size, grid_size, min_grid_size, max_grid_size
+            tile_size, grid_size, min_grid_size, max_grid_size, mixed_map=self
         )
         self.world_objects_map = WorldObjectsMap(
-            self, tile_size, grid_size, min_grid_size, max_grid_size
+            tile_size, grid_size, min_grid_size, max_grid_size, mixed_map=self
         )
+
+    def to_dict(self):
+        """Serialize the map to a dictionary."""
+        return {
+            "__class__": "MixedMap",
+            "tile_size": self.tile_size,
+            "grid_size": self.grid_size,
+            "min_grid_size": self.min_grid_size,
+            "max_grid_size": self.max_grid_size,
+            "tilemap": self.tilemap.to_dict(),
+            "world_objects_map": self.world_objects_map.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Deserialize a map from a dictionary."""
+        instance = cls._instance_from_data(data)
+
+        instance.tilemap = EditorTilemap.from_dict(data["tilemap"])
+        instance.tilemap.mixed_map = instance
+        instance.world_objects_map = WorldObjectsMap.from_dict(
+            data["world_objects_map"]
+        )
+        instance.world_objects_map.mixed_map = instance
+
+        instance.populate_layers()
+
+        # After all layers are loaded into the sub-maps and populated into the
+        # main map, establish the concurrences.
+        all_layers_data = (
+            data["tilemap"]["layers"] + data["world_objects_map"]["layers"]
+        )
+
+        cls._setup_concurrency_from_data(all_layers_data, instance)
+
+        return instance
 
     def populate_layers(self):
         for layer_name in LAYER_ORDER:
@@ -65,17 +100,3 @@ class MixedMap(GridMap):
         self.tilemap.grid_size = value
         self.world_objects_map.grid_size = value
         self._grid_size = self.clamp_size(value)
-
-    @property
-    def canvas_objects(self):
-        canvas_objects: dict[str, "CanvasObject"] = {}
-
-        for layer in self.layers:
-            layer = cast("WorldObjectsLayer", layer)
-            for canvas_object in layer.canvas_object_manager.canvas_objects.values():
-                canvas_objects[canvas_object.name] = canvas_object
-
-        return canvas_objects
-
-    def get_canvas_object(self, canvas_object_name: str) -> "CanvasObject":
-        return self.canvas_objects[canvas_object_name]
