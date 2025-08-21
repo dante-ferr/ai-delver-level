@@ -69,9 +69,8 @@ class LevelFactory:
         essentials_layer = self.world_objects_map.get_layer("essentials")
 
         essentials_layer.create_world_object_at(
-            START_DELVER_POSITION,
-            "delver",
+            START_DELVER_POSITION, "delver", unique=True
         )
-        # essentials_layer.canvas_object_manager.get_canvas_object(
-        #     "battery_snack"
-        # ).create_element_callback(START_GOAL_POSITION)
+        essentials_layer.create_world_object_at(
+            START_GOAL_POSITION, "goal", tags=["variation_battery_snack"], unique=True
+        )
