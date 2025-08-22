@@ -22,7 +22,7 @@ class WorldObjectRepresentation(GridElement):
             "name": self.name,
             "locked": self.locked,
             "unique": self.unique,
-            "tags": self.tags,
+            "tags": sorted(self.tags),
         }
 
     @classmethod

@@ -14,22 +14,20 @@ class LevelLoader:
         self.factory = LevelFactory()
         self._create_new_level()
 
-    def load_level(self, path: str | Path):
+    def load_level(self, dir_path: str | Path, file_name: str = "level.json"):
         """Loads a level from a file. The path of the level directory must be provided (instead of the level file itself)."""
-        if type(path) == str:
-            path = Path(path)
-        path = cast(Path, path)
-        file_path = path / "level.json"
+        if type(dir_path) == str:
+            dir_path = Path(dir_path)
+        dir_path = cast(Path, dir_path)
+        file_path = dir_path / file_name
 
         if file_path.is_file():
             from ..level import Level
 
-            self._level = Level.load(str(file_path))
+            return Level.load(str(file_path))
         else:
             logging.info("Creating new level")
             self._create_new_level()
-
-        return self.level
 
     @property
     def level(self):
@@ -39,7 +37,7 @@ class LevelLoader:
 
     @level.setter
     def level(self, value: "Level"):
-        """Sets the level to the given level. This should only be used for testing."""
+        """Sets the level to the given level."""
         return self._level
 
     def _create_new_level(self):
