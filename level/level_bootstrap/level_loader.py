@@ -38,7 +38,7 @@ class LevelLoader:
     @level.setter
     def level(self, value: "Level"):
         """Sets the level to the given level."""
-        return self._level
+        self._level = value
 
     def _create_new_level(self):
         self._level: "Level" = self.factory.create_level()

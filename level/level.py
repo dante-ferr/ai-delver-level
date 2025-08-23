@@ -103,7 +103,7 @@ class Level:
         return self.save_file_path.parent.is_dir() if self.save_file_path else None
 
     def save(self, custom_path: Path | str | None = None):
-        if not custom_path or not self.save_file_path:
+        if not custom_path and not self.save_file_path:
             raise ValueError("Save file path is not set for the level.")
 
         if isinstance(custom_path, str):
