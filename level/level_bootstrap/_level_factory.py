@@ -21,25 +21,20 @@ class LevelFactory:
         mixed_map.populate_layers()
 
         level = Level(mixed_map)
-        level.map.add_layer_concurrence("walls", "essentials")
+        level.map.add_layer_concurrence("platforms", "essentials")
 
         self._create_starting_tiles()
-        self.tilemap.lock_boundary_walls_if_needed()
+        self.tilemap.lock_boundary_platforms_if_needed()
         self._create_starting_world_objects()
 
         return level
 
     def _configure_tilemap(self):
         layers = {
-            "floor": EditorTilemapLayer(
-                "floor",
-                Tileset(str(ASSETS_PATH / "img/tilesets/dungeon/floor.png")),
-                str(ASSETS_PATH / "svg/floor.svg"),
-            ),
-            "walls": EditorTilemapLayer(
-                "walls",
-                Tileset(str(ASSETS_PATH / "img/tilesets/dungeon/walls.png")),
-                str(ASSETS_PATH / "svg/walls.svg"),
+            "platforms": EditorTilemapLayer(
+                "platforms",
+                Tileset(str(ASSETS_PATH / "img/tilesets/dungeon/platforms.png")),
+                str(ASSETS_PATH / "svg/wall.svg"),
             ),
         }
 
@@ -47,15 +42,9 @@ class LevelFactory:
             if layer_name in TILEMAP_LAYER_NAMES:
                 self.tilemap.add_layer(layers[layer_name])
 
-        self.tilemap.add_layer_concurrence("walls", "floor")
-
     def _create_starting_tiles(self):
-        for x in range(1, self.tilemap.grid_size[0] - 1):
-            for y in range(1, self.tilemap.grid_size[1] - 1):
-                self.tilemap.create_basic_floor_at((x, y), apply_formatting=False)
-
         for position in self.tilemap.get_edge_positions():
-            self.tilemap.create_basic_wall_at(position, apply_formatting=False)
+            self.tilemap.create_basic_platform_at(position, apply_formatting=False)
 
         self.tilemap.format_all_tiles()
 

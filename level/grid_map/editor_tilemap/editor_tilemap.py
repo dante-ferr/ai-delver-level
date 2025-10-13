@@ -9,12 +9,10 @@ if TYPE_CHECKING:
     from ..mixed_map import MixedMap
 
 
-FLOOR_VARIATIONS_FILENAME = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "floor_variations.json"
-)
-
-
 class EditorTilemap(Tilemap):
+    SHALLOW_PLATFORMS_VARIATIONS = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "shallow_platforms_variations.json"
+    )
 
     def __init__(
         self,
@@ -54,56 +52,44 @@ class EditorTilemap(Tilemap):
         """Get a layer by its name."""
         return cast("EditorTilemapLayer", super().get_layer(name))
 
-    def create_basic_wall_at(self, position: tuple[int, int], **args):
-        walls = self.get_layer("walls")
-        tile = walls.create_autotile_tile_at(
+    def create_basic_platform_at(self, position: tuple[int, int], **args):
+        platforms = self.get_layer("platforms")
+        tile = platforms.create_autotile_tile_at(
             position,
-            "wall",
-            default_shallow_tile_variations=True,
+            "platform",
             **args,
         )
         if tile is not None:
+
+            def _callback(sender, tile: "AutotileTile"):
+                if tile.is_shallow:
+                    tile.add_variations_from_json(self.SHALLOW_PLATFORMS_VARIATIONS)
+
+            tile.events["post_autotile"].connect(_callback, weak=False)
+
             self._reduce_grid_size_if_needed(tile)
 
         return tile
 
-    def create_basic_floor_at(
-        self, position: tuple[int, int], apply_formatting=False, **args
-    ):
-        floor = self.get_layer("floor")
-        tile = floor.create_tile_at(position, (0, 0), "floor", **args)
-        if tile is not None:
-            tile.add_variations_from_json(
-                FLOOR_VARIATIONS_FILENAME, apply_formatting=apply_formatting
-            )
+    def remove_platform_at(self, position: tuple[int, int], apply_formatting=False):
+        platforms = self.get_layer("platforms")
+        removed_tile = platforms.remove_tile_at(position, apply_formatting)
+        if removed_tile is not None:
+            self._expand_grid_size_if_needed(removed_tile)
 
-            self._expand_grid_size_if_needed(tile)
-
-        return tile
-
-    def remove_wall_at(self, position: tuple[int, int], apply_formatting=False):
-        walls = self.get_layer("walls")
-        walls.remove_tile_at(position, apply_formatting)
-
-        self.create_basic_floor_at(position, apply_formatting=apply_formatting)
-
-    def remove_floor_at(self, position: tuple[int, int], apply_formatting=False):
-        floor = self.get_layer("floor")
-        floor.remove_tile_at(position, apply_formatting)
-
-        self.create_basic_wall_at(position, apply_formatting=apply_formatting)
+        return removed_tile
 
     def _reduce_grid_size_if_needed(self, new_tile: "Tile"):
         tile_x, tile_y = new_tile.position
-        walls = self.get_layer("walls")
+        platforms = self.get_layer("platforms")
 
-        def _process_line(edge, walls=walls):
-            full_of_walls = all(
-                tile is not None and tile.name == "wall"
-                for tile in walls.get_edge_tiles(edge, retreat=1)
+        def _process_line(edge, platforms=platforms):
+            full_of_platforms = all(
+                tile is not None and tile.name == "platform"
+                for tile in platforms.get_edge_tiles(edge, retreat=1)
             )
 
-            if not full_of_walls:
+            if not full_of_platforms:
                 return
             deleted_elements = self.mixed_map.reduce_towards(edge)
             if not deleted_elements:
@@ -132,27 +118,27 @@ class EditorTilemap(Tilemap):
 
             fill_tiles: list["AutotileTile"] = []
             for x, y in added_positions:
-                tile = self.create_basic_wall_at((x, y), apply_formatting=False)
+                tile = self.create_basic_platform_at((x, y), apply_formatting=False)
                 if tile:
                     fill_tiles.append(tile)
 
             for tile in fill_tiles:
                 tile.format()
 
-        self.lock_boundary_walls_if_needed()
+        self.lock_boundary_platforms_if_needed()
 
-    def lock_boundary_walls_if_needed(self):
-        walls = self.get_layer("walls")
+    def lock_boundary_platforms_if_needed(self):
+        platforms = self.get_layer("platforms")
         elements: list["GridElement | None"] = []
 
         if self.grid_size[0] == self.max_grid_size[0]:
-            elements += walls.get_edge_elements("left") + walls.get_edge_elements(
-                "right"
-            )
+            elements += platforms.get_edge_elements(
+                "left"
+            ) + platforms.get_edge_elements("right")
         if self.grid_size[1] == self.max_grid_size[1]:
-            elements += walls.get_edge_elements("top") + walls.get_edge_elements(
-                "bottom"
-            )
+            elements += platforms.get_edge_elements(
+                "top"
+            ) + platforms.get_edge_elements("bottom")
 
         for element in elements:
             if element is not None:
