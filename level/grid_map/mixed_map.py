@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from level.grid_map.world_objects_map.world_objects_layer.world_objects_layer import (
         WorldObjectsLayer,
     )
+    from pytiling import AutotileTile
 
 
 class MixedMap(GridMap):
@@ -100,3 +101,23 @@ class MixedMap(GridMap):
         self.tilemap.grid_size = value
         self.world_objects_map.grid_size = value
         self._grid_size = self.clamp_size(value)
+
+    def expand_towards(self, direction, size=1):
+        new_positions = super().expand_towards(direction, size)
+
+        fill_tiles: list["AutotileTile"] = []
+        if not new_positions:
+            return new_positions
+
+        for x, y in new_positions:
+            tile = self.tilemap.create_basic_platform_at((x, y), apply_formatting=False)
+            if tile:
+                fill_tiles.append(tile)
+
+        for tile in fill_tiles:
+            tile.format()
+
+        return new_positions
+
+    def reduce_towards(self, direction, size=1):
+        return super().reduce_towards(direction, size)

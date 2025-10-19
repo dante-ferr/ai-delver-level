@@ -24,7 +24,7 @@ class LevelFactory:
         level.map.add_layer_concurrence("platforms", "essentials")
 
         self._create_starting_tiles()
-        self.tilemap.lock_boundary_platforms_if_needed()
+        self.tilemap.lock_edges_if_needed()
         self._create_starting_world_objects()
 
         return level

@@ -1,11 +1,16 @@
-from pytiling import Tilemap
+from pytiling import Tilemap, opposite_directions
 from typing import TYPE_CHECKING, cast, Literal
 import os
 
 
 if TYPE_CHECKING:
     from .editor_tilemap_layer import EditorTilemapLayer
-    from pytiling import Tile, GridElement, GridLayer, AutotileTile
+    from pytiling import (
+        Tile,
+        GridLayer,
+        AutotileTile,
+        Direction,
+    )
     from ..mixed_map import MixedMap
 
 
@@ -28,6 +33,7 @@ class EditorTilemap(Tilemap):
         acessing the MixedMap methods like 'reduce_towards' and 'expand_towards'.
         """
         super().__init__(tile_size, grid_size, min_grid_size, max_grid_size)
+        self.locked_edges = set()
         self._mixed_map = mixed_map
 
     def to_dict(self):
@@ -52,7 +58,9 @@ class EditorTilemap(Tilemap):
         """Get a layer by its name."""
         return cast("EditorTilemapLayer", super().get_layer(name))
 
-    def create_basic_platform_at(self, position: tuple[int, int], **args):
+    def create_basic_platform_at(
+        self, position: tuple[int, int], dynamic_resizing=False, **args
+    ):
         platforms = self.get_layer("platforms")
         tile = platforms.create_autotile_tile_at(
             position,
@@ -67,82 +75,123 @@ class EditorTilemap(Tilemap):
 
             tile.events["post_autotile"].connect(_callback, weak=False)
 
-            self._reduce_grid_size_if_needed(tile)
+            if dynamic_resizing:
+                self._dynamic_reduce_grid(tile)
 
         return tile
 
-    def remove_platform_at(self, position: tuple[int, int], apply_formatting=False):
+    def remove_platform_at(
+        self, position: tuple[int, int], dynamic_resizing=False, apply_formatting=False
+    ):
         platforms = self.get_layer("platforms")
         removed_tile = platforms.remove_tile_at(position, apply_formatting)
-        if removed_tile is not None:
-            self._expand_grid_size_if_needed(removed_tile)
+        if removed_tile is not None and dynamic_resizing:
+            self._dynamic_expand_grid(removed_tile)
 
         return removed_tile
 
-    def _reduce_grid_size_if_needed(self, new_tile: "Tile"):
-        tile_x, tile_y = new_tile.position
-        platforms = self.get_layer("platforms")
-
-        def _process_line(edge, platforms=platforms):
-            full_of_platforms = all(
-                tile is not None and tile.name == "platform"
-                for tile in platforms.get_edge_tiles(edge, retreat=1)
-            )
-
-            if not full_of_platforms:
-                return
-            deleted_elements = self.mixed_map.reduce_towards(edge)
-            if not deleted_elements:
-                return
-
-            _process_line(edge)
+    def _dynamic_reduce_grid(self, new_tile: "Tile"):
+        if self._is_semiedge(new_tile.position) is False:
+            return
 
         grid_width, grid_height = self.mixed_map.grid_size
+        tile_x, tile_y = new_tile.position
 
         if tile_x == 1:
-            _process_line("left")
+            self.reduce_towards_if_needed("left")
         if tile_x == grid_width - 2:
-            _process_line("right")
+            self.reduce_towards_if_needed("right")
         if tile_y == 1:
-            _process_line("top")
+            self.reduce_towards_if_needed("top")
         if tile_y == grid_height - 2:
-            _process_line("bottom")
+            self.reduce_towards_if_needed("bottom")
 
-    def _expand_grid_size_if_needed(self, new_tile: "Tile"):
+    def reduce_towards_if_needed(self, edge, first=True):
+        platforms = self.get_layer("platforms")
+
+        full_of_platforms = all(
+            tile is not None and tile.name == "platform"
+            for tile in platforms.get_edge_tiles(edge, retreat=1)
+        )
+
+        if not full_of_platforms:
+            return
+        deleted_elements = self.mixed_map.reduce_towards(edge)
+
+        # Unlock the edge and its opposite if this was the first reduction, to allow further expansions
+        if first:
+            self.unlock_edge(edge)
+            self.unlock_edge(opposite_directions[edge])
+
+        if not deleted_elements:
+            return
+
+        self.reduce_towards_if_needed(edge, first=False)
+
+    def reduce_if_needed(self):
+        for edge in ["left", "right", "top", "bottom"]:
+            self.reduce_towards_if_needed(edge)
+
+    def _dynamic_expand_grid(self, new_tile: "Tile"):
         if new_tile.edges is None:
             return
         for edge in new_tile.edges:
-            added_positions = self.mixed_map.expand_towards(edge)
-            if not added_positions:
-                continue
+            self.mixed_map.expand_towards(edge)
+            self.lock_edge_axis_if_needed(edge)
 
-            fill_tiles: list["AutotileTile"] = []
-            for x, y in added_positions:
-                tile = self.create_basic_platform_at((x, y), apply_formatting=False)
-                if tile:
-                    fill_tiles.append(tile)
+    def lock_edge(self, edge: "Direction"):
+        self.locked_edges.add(edge)
 
-            for tile in fill_tiles:
-                tile.format()
-
-        self.lock_boundary_platforms_if_needed()
-
-    def lock_boundary_platforms_if_needed(self):
         platforms = self.get_layer("platforms")
-        elements: list["GridElement | None"] = []
-
-        if self.grid_size[0] == self.max_grid_size[0]:
-            elements += platforms.get_edge_elements(
-                "left"
-            ) + platforms.get_edge_elements("right")
-        if self.grid_size[1] == self.max_grid_size[1]:
-            elements += platforms.get_edge_elements(
-                "top"
-            ) + platforms.get_edge_elements("bottom")
-
+        elements = platforms.get_edge_elements(edge)
         for element in elements:
             if element is not None:
                 element.locked = True
+
+    def lock_edges_if_needed(self):
+        self.lock_edge_axis_if_needed("left")
+        self.lock_edge_axis_if_needed("top")
+
+    def lock_edge_axis_if_needed(self, edge: "Direction"):
+        if (edge == "left" or edge == "right") and self.grid_size[
+            0
+        ] == self.max_grid_size[0]:
+            self.lock_edge("left")
+            self.lock_edge("right")
+
+        elif (edge == "top" or edge == "bottom") and self.grid_size[
+            1
+        ] == self.max_grid_size[1]:
+            self.lock_edge("top")
+            self.lock_edge("bottom")
+
+    def lock_all_edges(self):
+        for edge in ["left", "right", "top", "bottom"]:
+            edge = cast("Direction", edge)
+            self.lock_edge(edge)
+
+    def unlock_edge(self, edge: "Direction"):
+        self.locked_edges.discard(edge)
+
+        platforms = self.get_layer("platforms")
+        elements = platforms.get_edge_elements(edge)
+        for element in elements:
+            if element is not None:
+                element.locked = False
+
+    def unlock_expandable_edges(self):
+        if self.grid_size[0] < self.max_grid_size[0]:
+            self.unlock_edge("left")
+            self.unlock_edge("right")
+        if self.grid_size[1] < self.max_grid_size[1]:
+            self.unlock_edge("top")
+            self.unlock_edge("bottom")
+
+    def _is_semiedge(self, position: tuple[int, int]) -> bool:
+        x, y = position
+        grid_width, grid_height = self.grid_size
+
+        return x == 1 or x == grid_width - 2 or y == 1 or y == grid_height - 2
 
     @property
     def mixed_map(self):
