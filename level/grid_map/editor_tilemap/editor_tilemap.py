@@ -80,6 +80,22 @@ class EditorTilemap(Tilemap):
 
         return tile
 
+    def create_multiple_platforms_at(self, positions: list[tuple[int, int]]):
+        tiles: list["AutotileTile"] = []
+        for x, y in positions:
+            tile = self.create_basic_platform_at((x, y), apply_formatting=False)
+            if tile:
+                tiles.append(tile)
+            else:
+                # A reason for a tile not to be added here is that there is already one in place.
+                # In that case, we format the existing tile for it to respond to the new surroundings.
+                tile_in_place = self.get_layer("platforms").get_tile_at((x, y))
+                if tile_in_place:
+                    tile_in_place.format()
+
+        for tile in tiles:
+            tile.format()
+
     def remove_platform_at(
         self, position: tuple[int, int], dynamic_resizing=False, apply_formatting=False
     ):
@@ -180,12 +196,19 @@ class EditorTilemap(Tilemap):
                 element.locked = False
 
     def unlock_expandable_edges(self):
-        if self.grid_size[0] < self.max_grid_size[0]:
-            self.unlock_edge("left")
-            self.unlock_edge("right")
-        if self.grid_size[1] < self.max_grid_size[1]:
-            self.unlock_edge("top")
-            self.unlock_edge("bottom")
+        for edge in ["left", "right", "top", "bottom"]:
+            edge = cast("Direction", edge)
+            self.unlock_edge_if_expandable(edge)
+
+    def unlock_edge_if_expandable(self, edge: "Direction"):
+        if (edge == "left" or edge == "right") and self.grid_size[
+            0
+        ] < self.max_grid_size[0]:
+            self.unlock_edge(edge)
+        elif (edge == "top" or edge == "bottom") and self.grid_size[
+            1
+        ] < self.max_grid_size[1]:
+            self.unlock_edge(edge)
 
     def _is_semiedge(self, position: tuple[int, int]) -> bool:
         x, y = position

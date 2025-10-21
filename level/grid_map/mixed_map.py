@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from level.grid_map.world_objects_map.world_objects_layer.world_objects_layer import (
         WorldObjectsLayer,
     )
-    from pytiling import AutotileTile
+    from pytiling import AutotileTile, Direction
 
 
 class MixedMap(GridMap):
@@ -102,22 +102,118 @@ class MixedMap(GridMap):
         self.world_objects_map.grid_size = value
         self._grid_size = self.clamp_size(value)
 
-    def expand_towards(self, direction, size=1):
+    def expand_towards(self, direction, size=1, dynamic_resizing=False):
+        # Unlock the previously locked edge if the map can be expanded in that direction.
+        # It's done while dynamic resizing is disabled because in this scenario the edges
+        # should be locked.
+
+        if not dynamic_resizing:
+            self.tilemap.unlock_edge_if_expandable(direction)
+
         new_positions = super().expand_towards(direction, size)
 
-        fill_tiles: list["AutotileTile"] = []
         if not new_positions:
             return new_positions
 
-        for x, y in new_positions:
-            tile = self.tilemap.create_basic_platform_at((x, y), apply_formatting=False)
-            if tile:
-                fill_tiles.append(tile)
+        self.tilemap.create_multiple_platforms_at(new_positions)
 
-        for tile in fill_tiles:
-            tile.format()
+        # Locking the edge again.
+        if not dynamic_resizing:
+            self.tilemap.lock_all_edges()
 
         return new_positions
 
+    def multidirectional_expand_towards(self, directions: "list[Direction]", size: int):
+        """Expands the map in multiple directions, distributing size per axis and prioritizing remainders."""
+        h_dirs = [d for d in directions if d in ("left", "right")]
+        v_dirs = [d for d in directions if d in ("top", "bottom")]
+
+        if h_dirs:
+            available_h = self.max_grid_size[0] - self.grid_size[0]
+            total_h_expand = min(available_h, len(h_dirs) * size)
+
+            h_size = total_h_expand // len(h_dirs)
+            h_rem = total_h_expand % len(h_dirs)
+
+            # Sort to process left before right, ensuring right gets the remainder
+            for direction in sorted(h_dirs):
+                expand_size = h_size
+                if h_rem > 0 and direction == "right":
+                    expand_size += h_rem
+                if expand_size > 0:
+                    self.expand_towards(direction, expand_size)
+
+        if v_dirs:
+            available_v = self.max_grid_size[1] - self.grid_size[1]
+            total_v_expand = min(available_v, len(v_dirs) * size)
+
+            v_size = total_v_expand // len(v_dirs)
+            v_rem = total_v_expand % len(v_dirs)
+
+            # Sort to process top before bottom, ensuring bottom gets the remainder
+            for direction in sorted(v_dirs, reverse=True):
+                expand_size = v_size
+                if v_rem > 0 and direction == "bottom":
+                    expand_size += v_rem
+                if expand_size > 0:
+                    self.expand_towards(direction, expand_size)
+
+    def _get_clamped_expansion_size(self, direction, size):
+        if direction in ("right", "left"):
+            clamped_size = min(size, self.max_grid_size[0] - self.grid_size[0])
+        else:
+            clamped_size = min(size, self.max_grid_size[1] - self.grid_size[1])
+        return clamped_size
+
     def reduce_towards(self, direction, size=1):
-        return super().reduce_towards(direction, size)
+        deleted_elements = super().reduce_towards(direction, size)
+
+        self.tilemap.create_multiple_platforms_at(
+            self.get_edge_positions(direction, size)
+        )
+
+        return deleted_elements
+
+    def multidirectional_reduce_towards(self, directions: "list[Direction]", size: int):
+        """Reduces the map from multiple directions, distributing size per axis and prioritizing remainders."""
+        h_dirs: "list[Direction]" = [d for d in directions if d in ("left", "right")]
+        v_dirs: "list[Direction]" = [d for d in directions if d in ("top", "bottom")]
+        abs_size = abs(size)
+
+        if h_dirs:
+            available_h = self.grid_size[0] - self.min_grid_size[0]
+            total_h_reduce = min(available_h, len(h_dirs) * abs_size)
+
+            h_size = total_h_reduce // len(h_dirs)
+            h_rem = total_h_reduce % len(h_dirs)
+
+            # Sort to process left before right, ensuring right gets the remainder
+            for direction in sorted(h_dirs):
+                reduce_size = h_size
+                if h_rem > 0 and direction == "right":
+                    reduce_size += h_rem
+                if reduce_size > 0:
+                    self.reduce_towards(direction, reduce_size)
+
+        if v_dirs:
+            available_v = self.grid_size[1] - self.min_grid_size[1]
+            total_v_reduce = min(available_v, len(v_dirs) * abs_size)
+
+            v_size = total_v_reduce // len(v_dirs)
+            v_rem = total_v_reduce % len(v_dirs)
+
+            # Sort to process top before bottom, ensuring bottom gets the remainder
+            for direction in sorted(v_dirs, reverse=True):
+                reduce_size = v_size
+                if v_rem > 0 and direction == "bottom":
+                    reduce_size += v_rem
+                if reduce_size > 0:
+                    self.reduce_towards(direction, reduce_size)
+
+    def _get_clamped_reduction_size(self, direction, size):
+        if direction in ("right", "left"):
+            clamped_size = min(size, self.grid_size[0] - self.min_grid_size[0])
+        else:
+            clamped_size = min(size, self.grid_size[1] - self.min_grid_size[1])
+
+        return clamped_size
