@@ -168,9 +168,8 @@ class MixedMap(GridMap):
     def reduce_towards(self, direction, size=1):
         deleted_elements = super().reduce_towards(direction, size)
 
-        self.tilemap.create_multiple_platforms_at(
-            self.get_edge_positions(direction, size)
-        )
+        self.tilemap.create_multiple_platforms_at(self.get_edge_positions(direction, 1))
+        self.tilemap.lock_edge(direction)
 
         return deleted_elements
 
