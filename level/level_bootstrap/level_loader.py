@@ -1,6 +1,7 @@
 from ._level_factory import LevelFactory
 from ._level_factory import LevelFactory
 from pathlib import Path
+from level import config as level_config
 from typing import cast, TYPE_CHECKING
 import logging
 
@@ -14,7 +15,11 @@ class LevelLoader:
         self.factory = LevelFactory()
         self._create_new_level()
 
-    def load_level(self, dir_path: str | Path, file_name: str = "level.json"):
+    def load_level(
+        self,
+        dir_path: str | Path = level_config.LEVEL_SAVE_FOLDER_PATH,
+        file_name: str = "level.json",
+    ):
         """Loads a level from a file. The path of the level directory must be provided (instead of the level file itself)."""
         if type(dir_path) == str:
             dir_path = Path(dir_path)
@@ -26,8 +31,7 @@ class LevelLoader:
 
             return Level.load(str(file_path))
         else:
-            logging.info("Creating new level")
-            self._create_new_level()
+            raise FileNotFoundError(f"Level file {file_path} not found.")
 
     @property
     def level(self):
